@@ -24,12 +24,15 @@ export default function ReaderView() {
   const [title, setTitle] = useState("");
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showUI, setShowUI] = useState(true);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [showCover, setShowCover] = useState(true);
+  const [showNavbar, setShowNavbar] = useState(false);
 
   type NavigationDirection = "prev" | "next";
   type HideResult = "no-cover" | "advance" | "ignore" | "hidden";
+
+  // Create a ref to store the latest handleNavigation for epub.js closure
+  const handleNavigationRef = useRef<(direction: NavigationDirection) => void>(() => {});
 
   const hideCover = useCallback(
     (direction: NavigationDirection): HideResult => {
@@ -66,6 +69,11 @@ export default function ReaderView() {
     },
     [hideCover, ready],
   );
+
+  // Keep the ref updated with the latest handleNavigation
+  useEffect(() => {
+    handleNavigationRef.current = handleNavigation;
+  }, [handleNavigation]);
 
   // Debounced save
   const saveCfi = useCallback(async () => {
@@ -141,6 +149,17 @@ export default function ReaderView() {
           flow: "paginated",
         });
 
+        // Attach keyboard listener to the rendition (iframe context)
+        rendition.on("keydown", (e: KeyboardEvent) => {
+          if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            handleNavigationRef.current("prev");
+          } else if (e.key === "ArrowRight") {
+            e.preventDefault();
+            handleNavigationRef.current("next");
+          }
+        });
+
         // Don't assign to ref yet - wait until display() completes
 
         // Theme
@@ -196,11 +215,6 @@ export default function ReaderView() {
         // Track CFI on relocation
         rendition.on("relocated", (location: { start: { cfi: string } }) => {
           cfiRef.current = location.start.cfi;
-        });
-
-        // Tap to toggle UI
-        rendition.on("click", () => {
-          setShowUI((prev) => !prev);
         });
 
         // Get title
@@ -280,11 +294,20 @@ export default function ReaderView() {
 
   return (
     <div className="relative h-dvh w-full bg-white dark:bg-zinc-950">
+      {/* Hover trigger zone for navbar */}
+      <div
+        className="absolute inset-x-0 top-0 z-30 h-16"
+        onMouseEnter={() => setShowNavbar(true)}
+        onMouseLeave={() => setShowNavbar(false)}
+      />
+
       {/* Top bar */}
       <header
         className={`absolute inset-x-0 top-0 z-20 flex items-center justify-between border-b border-zinc-100 bg-white/90 px-4 py-2.5 backdrop-blur-md transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950/90 ${
-          showUI ? "translate-y-0" : "-translate-y-full"
+          showNavbar ? "translate-y-0" : "-translate-y-full"
         }`}
+        onMouseEnter={() => setShowNavbar(true)}
+        onMouseLeave={() => setShowNavbar(false)}
       >
         <button
           onClick={() => {

@@ -26,7 +26,6 @@ export default function ReaderView() {
   const [error, setError] = useState<string | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [showCover, setShowCover] = useState(true);
-  const [showNavbar, setShowNavbar] = useState(false);
 
   type NavigationDirection = "prev" | "next";
   type HideResult = "no-cover" | "advance" | "ignore" | "hidden";
@@ -293,22 +292,9 @@ export default function ReaderView() {
   }
 
   return (
-    <div className="relative h-dvh w-full bg-white dark:bg-zinc-950">
-      {/* Hover trigger zone for navbar */}
-      <div
-        className="absolute inset-x-0 top-0 z-30 h-16"
-        onMouseEnter={() => setShowNavbar(true)}
-        onMouseLeave={() => setShowNavbar(false)}
-      />
-
+    <div className="flex h-dvh w-full flex-col bg-white dark:bg-zinc-950">
       {/* Top bar */}
-      <header
-        className={`absolute inset-x-0 top-0 z-20 flex items-center justify-between border-b border-zinc-100 bg-white/90 px-4 py-2.5 backdrop-blur-md transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950/90 ${
-          showNavbar ? "translate-y-0" : "-translate-y-full"
-        }`}
-        onMouseEnter={() => setShowNavbar(true)}
-        onMouseLeave={() => setShowNavbar(false)}
-      >
+      <header className="z-20 flex items-center justify-between border-b border-zinc-100 bg-white/90 px-4 py-2.5 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/90">
         <button
           onClick={() => {
             saveCfi();
@@ -348,12 +334,15 @@ export default function ReaderView() {
         </div>
       )}
 
-      {/* Cover overlay */}
-      {showCover && ready && coverUrl && (
-        <div
-          className="absolute inset-0 z-20 flex items-center justify-center bg-white dark:bg-zinc-950"
-          onClick={() => handleNavigation("next")}
-        >
+      {/* Main content area - below header */}
+      <div className="relative flex-1 overflow-hidden">
+
+        {/* Cover overlay */}
+        {showCover && ready && coverUrl && (
+          <div
+            className="absolute inset-0 z-20 flex items-center justify-center bg-white dark:bg-zinc-950"
+            onClick={() => handleNavigation("next")}
+          >
           <div className="flex h-full max-h-[80vh] flex-col items-center justify-center gap-4 px-4">
             <div className="relative aspect-2/3 w-full max-w-sm overflow-hidden rounded-xl shadow-2xl">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -370,31 +359,32 @@ export default function ReaderView() {
               Press any arrow key or tap to start reading
             </p>
           </div>
-        </div>
-      )}
+          </div>
+        )}
 
-      {/* EPUB container */}
-      <div 
-        ref={viewerRef} 
-        className="h-full w-full focus:outline-none" 
-        tabIndex={0}
-      />
+        {/* EPUB container */}
+        <div 
+          ref={viewerRef} 
+          className="h-full w-full focus:outline-none" 
+          tabIndex={0}
+        />
 
-      {/* Navigation buttons — invisible touch targets on sides */}
-      <button
-        onClick={() => {
-          handleNavigation("prev");
-        }}
-        className="absolute left-0 top-12 bottom-12 w-1/5 z-10 focus:outline-none md:w-24"
-        aria-label="Previous page"
-      />
-      <button
-        onClick={() => {
-          handleNavigation("next");
-        }}
-        className="absolute right-0 top-12 bottom-12 w-1/5 z-10 focus:outline-none md:w-24"
-        aria-label="Next page"
-      />
+        {/* Navigation buttons — invisible touch targets on sides */}
+        <button
+          onClick={() => {
+            handleNavigation("prev");
+          }}
+          className="absolute left-0 top-0 bottom-0 w-1/5 z-10 focus:outline-none md:w-24"
+          aria-label="Previous page"
+        />
+        <button
+          onClick={() => {
+            handleNavigation("next");
+          }}
+          className="absolute right-0 top-0 bottom-0 w-1/5 z-10 focus:outline-none md:w-24"
+          aria-label="Next page"
+        />
+      </div>
     </div>
   );
 }

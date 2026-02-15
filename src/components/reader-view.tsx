@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
 import { getProgress, upsertProgress } from "@/lib/reading-progress";
 import type Book from "epubjs/types/book";
@@ -12,6 +13,7 @@ export default function ReaderView() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const bookId = searchParams.get("book");
   const viewerRef = useRef<HTMLDivElement>(null);
@@ -136,7 +138,8 @@ export default function ReaderView() {
         } = supabase.storage.from("books").getPublicUrl(bookId!);
 
         // Dynamic import — epub.js is CSR-only
-        const ePub = (await import("epubjs")).default;
+        const epubModule = await import("epubjs");
+        const ePub = epubModule.default || epubModule;
 
         const book = ePub(publicUrl);
         bookRef.current = book;
@@ -162,33 +165,34 @@ export default function ReaderView() {
         // Don't assign to ref yet - wait until display() completes
 
         // Theme
-        rendition.themes.default({
+        rendition.themes.register("light", {
           body: {
             "font-family": "'Georgia', 'Times New Roman', serif !important",
             "line-height": "1.8 !important",
             padding: "0 16px !important",
             color: "#1a1a1a !important",
+            background: "#ffffff !important",
           },
           a: {
             color: "#4a5568 !important",
           },
         });
 
-        // Dark mode support
-        if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-          rendition.themes.default({
-            body: {
-              "font-family": "'Georgia', 'Times New Roman', serif !important",
-              "line-height": "1.8 !important",
-              padding: "0 16px !important",
-              color: "#e4e4e7 !important",
-              background: "#09090b !important",
-            },
-            a: {
-              color: "#a1a1aa !important",
-            },
-          });
-        }
+        rendition.themes.register("dark", {
+          body: {
+            "font-family": "'Georgia', 'Times New Roman', serif !important",
+            "line-height": "1.8 !important",
+            padding: "0 16px !important",
+            color: "#e4e4e7 !important",
+            background: "#09090b !important",
+          },
+          a: {
+            color: "#a1a1aa !important",
+          },
+        });
+
+        // Apply initial theme
+        rendition.themes.select(theme);
 
         // Get saved progress
         let startCfi: string | undefined;
@@ -253,7 +257,15 @@ export default function ReaderView() {
         bookRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading, bookId, router]);
+
+  // Sync epub rendition theme when user toggles
+  useEffect(() => {
+    if (renditionRef.current) {
+      renditionRef.current.themes.select(theme);
+    }
+  }, [theme]);
 
   // Auto-focus viewer when ready
   useEffect(() => {
@@ -321,7 +333,21 @@ export default function ReaderView() {
         <h1 className="max-w-[60%] truncate text-sm font-medium text-zinc-700 dark:text-zinc-300">
           {title}
         </h1>
-        <div className="w-8" />
+        <button
+          onClick={toggleTheme}
+          className="rounded-lg p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {theme === "dark" ? (
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          ) : (
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          )}
+        </button>
       </header>
 
       {/* Loading overlay */}

@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Ensure epubjs is handled client-side only
+    serverComponentsExternalPackages: ["epubjs"],
+  },
   images: {
     remotePatterns: [
       {

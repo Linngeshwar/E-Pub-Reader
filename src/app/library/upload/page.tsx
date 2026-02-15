@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function UploadPage() {
   const { user, loading } = useAuth();
@@ -78,12 +79,15 @@ export default function UploadPage() {
           <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
             📤 Upload Books
           </h1>
-          <Link
-            href="/library"
-            className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-          >
-            Back to Library
-          </Link>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <Link
+              href="/library"
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            >
+              Back to Library
+            </Link>
+          </div>
         </div>
       </header>
 

@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface BookFile {
   name: string;
@@ -112,6 +113,7 @@ export default function LibraryPage() {
             📖 Library
           </h1>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <Link
               href="/library/upload"
               className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"

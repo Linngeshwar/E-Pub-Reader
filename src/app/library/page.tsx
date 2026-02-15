@@ -5,11 +5,13 @@ import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 interface BookFile {
   name: string;
   id: string;
   url: string;
+  coverUrl: string | null;
 }
 
 export default function LibraryPage() {
@@ -28,12 +30,17 @@ export default function LibraryPage() {
     if (!user) return;
 
     async function fetchBooks() {
-      const { data, error } = await supabase.storage.from("books").list("", {
-        limit: 200,
-        sortBy: { column: "name", order: "asc" },
-      });
-
-      console.log("📚 Storage list result:", { data, error });
+      // List files in user's folder
+      const userFolder = user!.id;
+      const [{ data, error }, coverResponse] = await Promise.all([
+        supabase.storage.from("books").list(userFolder, {
+          limit: 200,
+          sortBy: { column: "name", order: "asc" },
+        }),
+        supabase.storage
+          .from("books")
+          .list(`${userFolder}/.covers`, { limit: 200 }),
+      ]);
 
       if (error) {
         console.error("Error listing books:", error);
@@ -41,26 +48,44 @@ export default function LibraryPage() {
         return;
       }
 
-      console.log("📁 All files:", data);
+      const coverList = coverResponse.error ? [] : coverResponse.data || [];
+      const coverFiles = coverList.reduce(
+        (acc, file) => {
+          const [base] = file.name.split(".cover.");
+          if (base) acc.set(base, file.name);
+          return acc;
+        },
+        new Map<string, string>()
+      );
 
       const epubs = (data || []).filter((f) =>
         f.name.toLowerCase().endsWith(".epub"),
       );
 
-      console.log("📖 EPUB files found:", epubs);
-
       const mapped: BookFile[] = epubs.map((f) => {
+        const filePath = `${userFolder}/${f.name}`;
         const {
           data: { publicUrl },
-        } = supabase.storage.from("books").getPublicUrl(f.name);
+        } = supabase.storage.from("books").getPublicUrl(filePath);
+
+        const coverFileName = coverFiles.get(f.name);
+        let coverUrl: string | null = null;
+        if (coverFileName) {
+          const coverPath = `${userFolder}/.covers/${coverFileName}`;
+          const {
+            data: { publicUrl: coverPublicUrl },
+          } = supabase.storage.from("books").getPublicUrl(coverPath);
+          coverUrl = coverPublicUrl;
+        }
+
         return {
           name: f.name.replace(/\.epub$/i, ""),
-          id: f.name,
+          id: filePath,
           url: publicUrl,
+          coverUrl,
         };
       });
 
-      console.log("✅ Mapped books:", mapped);
       setBooks(mapped);
       setFetching(false);
     }
@@ -85,6 +110,12 @@ export default function LibraryPage() {
             📖 Library
           </h1>
           <div className="flex items-center gap-3">
+            <Link
+              href="/library/upload"
+              className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            >
+              Upload
+            </Link>
             <span className="hidden text-xs text-zinc-400 sm:inline">
               {user.email}
             </span>
@@ -110,10 +141,16 @@ export default function LibraryPage() {
             <h2 className="mb-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
               No books yet
             </h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Upload EPUB files to your Supabase &quot;books&quot; storage
-              bucket to see them here.
+            <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
+              Upload EPUB files to your Supabase &quot;books&quot; storage bucket
+              in a folder named with your user ID: <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">{user.id}</code>
             </p>
+            <Link
+              href="/library/upload"
+              className="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            >
+              Upload books
+            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -123,8 +160,20 @@ export default function LibraryPage() {
                 href={`/reader?book=${encodeURIComponent(book.id)}`}
                 className="group"
               >
-                <div className="mb-2 flex aspect-[2/3] items-center justify-center rounded-xl bg-gradient-to-br from-zinc-200 to-zinc-300 transition-transform group-hover:scale-[1.02] dark:from-zinc-800 dark:to-zinc-700">
-                  <span className="text-4xl">📕</span>
+                <div className="relative mb-2 aspect-2/3 overflow-hidden rounded-xl bg-linear-to-br from-zinc-200 to-zinc-300 transition-transform group-hover:scale-[1.02] dark:from-zinc-800 dark:to-zinc-700">
+                  {book.coverUrl ? (
+                    <Image
+                      src={book.coverUrl}
+                      alt={book.name}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <span className="text-4xl">📕</span>
+                    </div>
+                  )}
                 </div>
                 <p className="line-clamp-2 text-sm font-medium text-zinc-800 group-hover:text-zinc-600 dark:text-zinc-200 dark:group-hover:text-zinc-400">
                   {book.name}

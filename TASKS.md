@@ -3,15 +3,18 @@
 This file tracks actionable steps you should take next to configure, test, and improve the EPUB reader PWA.
 
 - [x] Review code and project structure
-- [ ] Add Supabase credentials to `.env.local`
+- [x] Add Supabase credentials to `.env.local`
   - `NEXT_PUBLIC_SUPABASE_URL`
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- [ ] Run the SQL migration in Supabase (see `supabase/migrations/001_reading_progress.sql`)
-- [ ] Create a public storage bucket named `books` in Supabase
-- [ ] Upload `.epub` files to the `books` bucket
+- [x] Run the SQL migration in Supabase (see `supabase/migrations/001_reading_progress.sql`)
+- [x] Create a public storage bucket named `books` in Supabase
+- [ ] Run storage policies migration (`supabase/migrations/002_storage_policies.sql`)
+- [ ] Upload `.epub` files to the `books` bucket in a folder named with your user ID
+  - Or use the built-in Upload page at `/library/upload` after signing in
 - [ ] Open the app locally: `npm run dev` and sign up / sign in
-- [ ] Verify library lists uploaded EPUBs
-- [ ] Open a book in the reader and verify CFI is restored after reload
+- [ ] Verify library lists uploaded EPUBs with covers
+- [ ] Open a book in the reader — see cover page first, press arrow keys to start reading
+- [ ] Verify CFI is restored after reload
 - [ ] Test offline reading (install PWA, turn off network, open previously opened book)
 - [ ] Verify progress sync between devices (sign in on two devices and move reading position)
 

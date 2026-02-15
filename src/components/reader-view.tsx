@@ -24,6 +24,9 @@ export default function ReaderView() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showUI, setShowUI] = useState(true);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [showCover, setShowCover] = useState(false);
+  const startedAtBeginningRef = useRef(false);
 
   // Debounced save
   const saveCfi = useCallback(async () => {
@@ -125,19 +128,26 @@ export default function ReaderView() {
 
         // Get saved progress
         let startCfi: string | undefined;
+        let hasProgress = false;
 
         // Try remote first, fallback to local cache
         const progress = await getProgress(user!.id, bookId!);
         if (progress?.last_location_cfi) {
           startCfi = progress.last_location_cfi;
+          hasProgress = true;
         } else {
           const cached = localStorage.getItem(`cfi:${bookId}`);
-          if (cached) startCfi = cached;
+          if (cached) {
+            startCfi = cached;
+            hasProgress = true;
+          }
         }
 
         await rendition.display(startCfi);
 
         if (cancelled) return;
+
+        startedAtBeginningRef.current = !hasProgress;
 
         // Track CFI on relocation
         rendition.on("relocated", (location: { start: { cfi: string } }) => {
@@ -159,6 +169,20 @@ export default function ReaderView() {
         const metadata = await book.loaded.metadata;
         if (!cancelled) setTitle(metadata.title || bookId!);
 
+        // Extract cover
+        try {
+          const coverUrlFromBook = (await book.coverUrl()) as string | null;
+          if (!cancelled) {
+            setCoverUrl(coverUrlFromBook);
+            setShowCover(Boolean(coverUrlFromBook) && !hasProgress);
+          }
+        } catch {
+          console.log("No cover found in EPUB");
+          if (!cancelled) {
+            setShowCover(false);
+          }
+        }
+
         if (!cancelled) setReady(true);
       } catch (err) {
         console.error("Failed to load book:", err);
@@ -177,16 +201,29 @@ export default function ReaderView() {
     };
   }, [user, authLoading, bookId, router]);
 
+  const hideCover = useCallback(() => {
+    if (!showCover) return false;
+    setShowCover(false);
+    if (startedAtBeginningRef.current) {
+      renditionRef.current?.next();
+      startedAtBeginningRef.current = false;
+    }
+    return true;
+  }, [showCover]);
+
   // Keyboard navigation at document level
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        if (hideCover()) return;
+      }
       if (!renditionRef.current) return;
       if (e.key === "ArrowLeft") renditionRef.current.prev();
       if (e.key === "ArrowRight") renditionRef.current.next();
     }
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, []);
+  }, [hideCover]);
 
   if (error) {
     return (
@@ -248,17 +285,48 @@ export default function ReaderView() {
         </div>
       )}
 
+      {/* Cover overlay */}
+      {showCover && ready && coverUrl && (
+        <div
+          className="absolute inset-0 z-20 flex items-center justify-center bg-white dark:bg-zinc-950"
+          onClick={hideCover}
+        >
+          <div className="flex h-full max-h-[80vh] flex-col items-center justify-center gap-4 px-4">
+            <div className="relative aspect-2/3 w-full max-w-sm overflow-hidden rounded-xl shadow-2xl">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={coverUrl}
+                alt={title}
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <h1 className="max-w-md text-center text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+              {title}
+            </h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              Press any arrow key or tap to start reading
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* EPUB container */}
       <div ref={viewerRef} className="h-full w-full" />
 
       {/* Navigation buttons — invisible touch targets on sides */}
       <button
-        onClick={() => renditionRef.current?.prev()}
+        onClick={() => {
+          if (hideCover()) return;
+          renditionRef.current?.prev();
+        }}
         className="absolute left-0 top-12 bottom-12 w-1/5 z-10 focus:outline-none md:w-24"
         aria-label="Previous page"
       />
       <button
-        onClick={() => renditionRef.current?.next()}
+        onClick={() => {
+          if (hideCover()) return;
+          renditionRef.current?.next();
+        }}
         className="absolute right-0 top-12 bottom-12 w-1/5 z-10 focus:outline-none md:w-24"
         aria-label="Next page"
       />

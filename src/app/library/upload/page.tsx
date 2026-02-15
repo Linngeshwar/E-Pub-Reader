@@ -27,27 +27,6 @@ export default function UploadPage() {
     return null;
   }
 
-  async function extractCover(file: File) {
-    try {
-      const ePub = (await import("epubjs")).default;
-      const arrayBuffer = await file.arrayBuffer();
-      const book = ePub(arrayBuffer);
-      const coverUrl = (await book.coverUrl()) as string | null;
-      if (!coverUrl) {
-        book.destroy();
-        return null;
-      }
-      const response = await fetch(coverUrl);
-      const blob = await response.blob();
-      book.destroy();
-      const extension = blob.type.split("/")[1] || "jpg";
-      return { blob, extension };
-    } catch (err) {
-      console.warn("No cover found during upload:", err);
-      return null;
-    }
-  }
-
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -67,7 +46,7 @@ export default function UploadPage() {
 
       try {
         const filePath = `${user!.id}/${file.name}`;
-        
+
         const { error: uploadError } = await supabase.storage
           .from("books")
           .upload(filePath, file, {
@@ -77,21 +56,6 @@ export default function UploadPage() {
 
         if (uploadError) {
           throw uploadError;
-        }
-
-        const coverAsset = await extractCover(file);
-        if (coverAsset) {
-          const coverPath = `${user!.id}/.covers/${file.name}.cover.${coverAsset.extension}`;
-          const { error: coverError } = await supabase.storage
-            .from("books")
-            .upload(coverPath, coverAsset.blob, {
-              cacheControl: "3600",
-              upsert: true,
-              contentType: coverAsset.blob.type || "image/jpeg",
-            });
-          if (coverError) {
-            console.warn("Cover upload failed for", file.name, coverError);
-          }
         }
 
         uploaded.push(file.name);
@@ -218,7 +182,10 @@ export default function UploadPage() {
               📝 Note
             </h3>
             <p className="text-xs text-zinc-600 dark:text-zinc-400">
-              Books will be uploaded to: <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-700">{user.id}/</code>
+              Books will be uploaded to:{" "}
+              <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-700">
+                {user.id}/
+              </code>
             </p>
           </div>
         </div>

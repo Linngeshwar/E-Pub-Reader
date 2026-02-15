@@ -19,14 +19,53 @@ export default function ReaderView() {
   const renditionRef = useRef<Rendition | null>(null);
   const cfiRef = useRef<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startedAtBeginningRef = useRef(false);
 
   const [title, setTitle] = useState("");
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showUI, setShowUI] = useState(true);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
-  const [showCover, setShowCover] = useState(false);
-  const startedAtBeginningRef = useRef(false);
+  const [showCover, setShowCover] = useState(true);
+
+  type NavigationDirection = "prev" | "next";
+  type HideResult = "no-cover" | "advance" | "ignore" | "hidden";
+
+  const hideCover = useCallback(
+    (direction: NavigationDirection): HideResult => {
+      if (!showCover) return "no-cover";
+      setShowCover(false);
+      if (startedAtBeginningRef.current) {
+        const shouldAdvance = direction === "next";
+        startedAtBeginningRef.current = false;
+        return shouldAdvance ? "advance" : "ignore";
+      }
+      return "hidden";
+    },
+    [showCover],
+  );
+
+  const handleNavigation = useCallback(
+    (direction: NavigationDirection) => {
+      const rendition = renditionRef.current;
+      // Check if rendition exists and is ready to navigate
+      if (!rendition || !ready) return;
+      const result = hideCover(direction);
+      if (result === "advance") {
+        rendition.next();
+        return;
+      }
+      if (result === "ignore") {
+        return;
+      }
+      if (direction === "prev") {
+        rendition.prev();
+      } else {
+        rendition.next();
+      }
+    },
+    [hideCover, ready],
+  );
 
   // Debounced save
   const saveCfi = useCallback(async () => {
@@ -74,6 +113,13 @@ export default function ReaderView() {
     }
     if (!viewerRef.current) return;
 
+    // Reset state when switching books
+    setReady(false);
+    setError(null);
+    setTitle("");
+    setCoverUrl(null);
+    setShowCover(false);
+
     let cancelled = false;
 
     async function init() {
@@ -84,91 +130,68 @@ export default function ReaderView() {
 
         // Dynamic import — epub.js is CSR-only
         const ePub = (await import("epubjs")).default;
-        
-        if (cancelled) return;
 
         const book = ePub(publicUrl);
         bookRef.current = book;
 
-        // Ensure the element still exists and isn't polluted
-        if (!viewerRef.current || cancelled) {
-            book.destroy();
-            return;
-        }
-        
-        // Clear previous content just in case
-        viewerRef.current.innerHTML = "";
-
-        const rendition = book.renderTo(viewerRef.current, {
+        const rendition = book.renderTo(viewerRef.current!, {
           width: "100%",
           height: "100%",
-          // auto spread can sometimes cause layout jumps on resize, 
-          // but is generally what you want for responsive readers
-          spread: "auto", 
+          spread: "auto",
           flow: "paginated",
-          manager: "default",
         });
 
-        renditionRef.current = rendition;
+        // Don't assign to ref yet - wait until display() completes
 
-        // Theme - Added top padding to account for the header
-        const commonBodyStyles = {
-            "font-family": "'Georgia', 'Times New Roman', serif !important",
-            "line-height": "1.8 !important",
-            // Padding: Top (60px for header), Right, Bottom, Left
-            padding: "60px 24px 24px 24px !important", 
-            "max-width": "900px !important",
-            margin: "0 auto !important",
-        };
-
+        // Theme
         rendition.themes.default({
           body: {
-            ...commonBodyStyles,
+            "font-family": "'Georgia', 'Times New Roman', serif !important",
+            "line-height": "1.8 !important",
+            padding: "0 16px !important",
             color: "#1a1a1a !important",
           },
-          a: { color: "#4a5568 !important" },
+          a: {
+            color: "#4a5568 !important",
+          },
         });
 
         // Dark mode support
         if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
           rendition.themes.default({
             body: {
-              ...commonBodyStyles,
+              "font-family": "'Georgia', 'Times New Roman', serif !important",
+              "line-height": "1.8 !important",
+              padding: "0 16px !important",
               color: "#e4e4e7 !important",
               background: "#09090b !important",
             },
-            a: { color: "#a1a1aa !important" },
+            a: {
+              color: "#a1a1aa !important",
+            },
           });
         }
 
         // Get saved progress
         let startCfi: string | undefined;
-        let hasProgress = false;
 
         // Try remote first, fallback to local cache
         const progress = await getProgress(user!.id, bookId!);
-        
-        if (cancelled) {
-            book.destroy();
-            return;
-        }
-
         if (progress?.last_location_cfi) {
           startCfi = progress.last_location_cfi;
-          hasProgress = true;
         } else {
           const cached = localStorage.getItem(`cfi:${bookId}`);
-          if (cached) {
-            startCfi = cached;
-            hasProgress = true;
-          }
+          if (cached) startCfi = cached;
         }
+
+        startedAtBeginningRef.current = !startCfi;
 
         await rendition.display(startCfi);
 
         if (cancelled) return;
 
-        startedAtBeginningRef.current = !hasProgress;
+        // Now that display is complete, assign to ref
+        renditionRef.current = rendition;
 
         // Track CFI on relocation
         rendition.on("relocated", (location: { start: { cfi: string } }) => {
@@ -180,12 +203,6 @@ export default function ReaderView() {
           setShowUI((prev) => !prev);
         });
 
-        // Keyboard nav
-        rendition.on("keydown", (e: KeyboardEvent) => {
-          if (e.key === "ArrowLeft") rendition.prev();
-          if (e.key === "ArrowRight") rendition.next();
-        });
-
         // Get title
         const metadata = await book.loaded.metadata;
         if (!cancelled) setTitle(metadata.title || bookId!);
@@ -193,18 +210,17 @@ export default function ReaderView() {
         // Extract cover
         try {
           const coverUrlFromBook = (await book.coverUrl()) as string | null;
-          if (!cancelled) {
+          if (coverUrlFromBook && !cancelled) {
             setCoverUrl(coverUrlFromBook);
-            setShowCover(Boolean(coverUrlFromBook) && !hasProgress);
           }
         } catch {
           console.log("No cover found in EPUB");
-          if (!cancelled) {
-            setShowCover(false);
-          }
         }
 
-        if (!cancelled) setReady(true);
+        if (!cancelled) {
+          setShowCover(startedAtBeginningRef.current);
+          setReady(true);
+        }
       } catch (err) {
         console.error("Failed to load book:", err);
         if (!cancelled) setError("Failed to load book. Please try again.");
@@ -215,6 +231,10 @@ export default function ReaderView() {
 
     return () => {
       cancelled = true;
+      // Clean up both book and rendition
+      if (renditionRef.current) {
+        renditionRef.current = null;
+      }
       if (bookRef.current) {
         bookRef.current.destroy();
         bookRef.current = null;
@@ -222,29 +242,27 @@ export default function ReaderView() {
     };
   }, [user, authLoading, bookId, router]);
 
-  const hideCover = useCallback(() => {
-    if (!showCover) return false;
-    setShowCover(false);
-    if (startedAtBeginningRef.current) {
-      renditionRef.current?.next();
-      startedAtBeginningRef.current = false;
+  // Auto-focus viewer when ready
+  useEffect(() => {
+    if (ready && viewerRef.current) {
+      viewerRef.current.focus();
     }
-    return true;
-  }, [showCover]);
+  }, [ready]);
 
-  // Keyboard navigation at document level
+  // Keyboard navigation at window level
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-        if (hideCover()) return;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        handleNavigation("prev");
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        handleNavigation("next");
       }
-      if (!renditionRef.current) return;
-      if (e.key === "ArrowLeft") renditionRef.current.prev();
-      if (e.key === "ArrowRight") renditionRef.current.next();
     }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [hideCover]);
+    window.addEventListener("keydown", handleKey, true);
+    return () => window.removeEventListener("keydown", handleKey, true);
+  }, [handleNavigation, ready]);
 
   if (error) {
     return (
@@ -261,10 +279,10 @@ export default function ReaderView() {
   }
 
   return (
-    <div className="relative h-dvh w-full bg-white dark:bg-zinc-950 overflow-hidden">
+    <div className="relative h-dvh w-full bg-white dark:bg-zinc-950">
       {/* Top bar */}
       <header
-        className={`absolute inset-x-0 top-0 z-20 flex items-center justify-between border-b border-zinc-100 bg-white/95 px-4 py-2.5 backdrop-blur-md transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950/95 ${
+        className={`absolute inset-x-0 top-0 z-20 flex items-center justify-between border-b border-zinc-100 bg-white/90 px-4 py-2.5 backdrop-blur-md transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950/90 ${
           showUI ? "translate-y-0" : "-translate-y-full"
         }`}
       >
@@ -273,7 +291,7 @@ export default function ReaderView() {
             saveCfi();
             router.push("/library");
           }}
-          className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
           aria-label="Back to library"
         >
           <svg
@@ -289,6 +307,7 @@ export default function ReaderView() {
               d="M15 19l-7-7 7-7"
             />
           </svg>
+          <span className="hidden sm:inline">Library</span>
         </button>
         <h1 className="max-w-[60%] truncate text-sm font-medium text-zinc-700 dark:text-zinc-300">
           {title}
@@ -310,7 +329,7 @@ export default function ReaderView() {
       {showCover && ready && coverUrl && (
         <div
           className="absolute inset-0 z-20 flex items-center justify-center bg-white dark:bg-zinc-950"
-          onClick={hideCover}
+          onClick={() => handleNavigation("next")}
         >
           <div className="flex h-full max-h-[80vh] flex-col items-center justify-center gap-4 px-4">
             <div className="relative aspect-2/3 w-full max-w-sm overflow-hidden rounded-xl shadow-2xl">
@@ -332,21 +351,23 @@ export default function ReaderView() {
       )}
 
       {/* EPUB container */}
-      <div ref={viewerRef} className="h-full w-full" />
+      <div 
+        ref={viewerRef} 
+        className="h-full w-full focus:outline-none" 
+        tabIndex={0}
+      />
 
       {/* Navigation buttons — invisible touch targets on sides */}
       <button
         onClick={() => {
-          if (hideCover()) return;
-          renditionRef.current?.prev();
+          handleNavigation("prev");
         }}
         className="absolute left-0 top-12 bottom-12 w-1/5 z-10 focus:outline-none md:w-24"
         aria-label="Previous page"
       />
       <button
         onClick={() => {
-          if (hideCover()) return;
-          renditionRef.current?.next();
+          handleNavigation("next");
         }}
         className="absolute right-0 top-12 bottom-12 w-1/5 z-10 focus:outline-none md:w-24"
         aria-label="Next page"

@@ -49,14 +49,11 @@ export default function LibraryPage() {
       }
 
       const coverList = coverResponse.error ? [] : coverResponse.data || [];
-      const coverFiles = coverList.reduce(
-        (acc, file) => {
-          const [base] = file.name.split(".cover.");
-          if (base) acc.set(base, file.name);
-          return acc;
-        },
-        new Map<string, string>()
-      );
+      const coverFiles = coverList.reduce((acc, file) => {
+        const [base] = file.name.split(".cover.");
+        if (base) acc.set(base, file.name);
+        return acc;
+      }, new Map<string, string>());
 
       const epubs = (data || []).filter((f) =>
         f.name.toLowerCase().endsWith(".epub"),
@@ -142,8 +139,11 @@ export default function LibraryPage() {
               No books yet
             </h2>
             <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
-              Upload EPUB files to your Supabase &quot;books&quot; storage bucket
-              in a folder named with your user ID: <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">{user.id}</code>
+              Upload EPUB files to your Supabase &quot;books&quot; storage
+              bucket in a folder named with your user ID:{" "}
+              <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">
+                {user.id}
+              </code>
             </p>
             <Link
               href="/library/upload"

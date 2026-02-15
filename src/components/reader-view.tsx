@@ -84,45 +84,60 @@ export default function ReaderView() {
 
         // Dynamic import — epub.js is CSR-only
         const ePub = (await import("epubjs")).default;
+        
+        if (cancelled) return;
 
         const book = ePub(publicUrl);
         bookRef.current = book;
 
-        const rendition = book.renderTo(viewerRef.current!, {
+        // Ensure the element still exists and isn't polluted
+        if (!viewerRef.current || cancelled) {
+            book.destroy();
+            return;
+        }
+        
+        // Clear previous content just in case
+        viewerRef.current.innerHTML = "";
+
+        const rendition = book.renderTo(viewerRef.current, {
           width: "100%",
           height: "100%",
-          spread: "auto",
+          // auto spread can sometimes cause layout jumps on resize, 
+          // but is generally what you want for responsive readers
+          spread: "auto", 
           flow: "paginated",
+          manager: "default",
         });
 
         renditionRef.current = rendition;
 
-        // Theme
-        rendition.themes.default({
-          body: {
+        // Theme - Added top padding to account for the header
+        const commonBodyStyles = {
             "font-family": "'Georgia', 'Times New Roman', serif !important",
             "line-height": "1.8 !important",
-            padding: "0 16px !important",
+            // Padding: Top (60px for header), Right, Bottom, Left
+            padding: "60px 24px 24px 24px !important", 
+            "max-width": "900px !important",
+            margin: "0 auto !important",
+        };
+
+        rendition.themes.default({
+          body: {
+            ...commonBodyStyles,
             color: "#1a1a1a !important",
           },
-          a: {
-            color: "#4a5568 !important",
-          },
+          a: { color: "#4a5568 !important" },
         });
 
         // Dark mode support
         if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
           rendition.themes.default({
             body: {
-              "font-family": "'Georgia', 'Times New Roman', serif !important",
-              "line-height": "1.8 !important",
-              padding: "0 16px !important",
+              ...commonBodyStyles,
               color: "#e4e4e7 !important",
               background: "#09090b !important",
             },
-            a: {
-              color: "#a1a1aa !important",
-            },
+            a: { color: "#a1a1aa !important" },
           });
         }
 
@@ -132,6 +147,12 @@ export default function ReaderView() {
 
         // Try remote first, fallback to local cache
         const progress = await getProgress(user!.id, bookId!);
+        
+        if (cancelled) {
+            book.destroy();
+            return;
+        }
+
         if (progress?.last_location_cfi) {
           startCfi = progress.last_location_cfi;
           hasProgress = true;
@@ -240,10 +261,10 @@ export default function ReaderView() {
   }
 
   return (
-    <div className="relative h-dvh w-full bg-white dark:bg-zinc-950">
+    <div className="relative h-dvh w-full bg-white dark:bg-zinc-950 overflow-hidden">
       {/* Top bar */}
       <header
-        className={`absolute inset-x-0 top-0 z-20 flex items-center justify-between border-b border-zinc-100 bg-white/90 px-4 py-2.5 backdrop-blur-md transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950/90 ${
+        className={`absolute inset-x-0 top-0 z-20 flex items-center justify-between border-b border-zinc-100 bg-white/95 px-4 py-2.5 backdrop-blur-md transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950/95 ${
           showUI ? "translate-y-0" : "-translate-y-full"
         }`}
       >

@@ -17,7 +17,10 @@ export async function lookupWord(
   word: string,
 ): Promise<DictionaryResult | null> {
   try {
-    const cleaned = word.toLowerCase().trim().replace(/[^a-z'-]/g, "");
+    const cleaned = word
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z'-]/g, "");
     if (!cleaned || cleaned.length < 2) return null;
 
     const response = await fetch(
@@ -34,14 +37,17 @@ export async function lookupWord(
       word: entry.word,
       phonetic: entry.phonetic || entry.phonetics?.[0]?.text,
       meanings: (entry.meanings || []).map(
-        (m: { partOfSpeech: string; definitions: { definition: string; example?: string }[] }) => ({
+        (m: {
+          partOfSpeech: string;
+          definitions: { definition: string; example?: string }[];
+        }) => ({
           partOfSpeech: m.partOfSpeech,
-          definitions: (m.definitions || []).slice(0, 3).map(
-            (d: { definition: string; example?: string }) => ({
+          definitions: (m.definitions || [])
+            .slice(0, 3)
+            .map((d: { definition: string; example?: string }) => ({
               definition: d.definition,
               example: d.example,
-            }),
-          ),
+            })),
         }),
       ),
       sourceUrl: entry.sourceUrls?.[0],

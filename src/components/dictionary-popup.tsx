@@ -42,8 +42,18 @@ export default function DictionaryPopup({
             onClick={onClose}
             className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -69,7 +79,10 @@ export default function DictionaryPopup({
                 </p>
                 <ol className="list-decimal space-y-1.5 pl-4">
                   {meaning.definitions.map((def, j) => (
-                    <li key={j} className="text-sm text-zinc-700 dark:text-zinc-300">
+                    <li
+                      key={j}
+                      className="text-sm text-zinc-700 dark:text-zinc-300"
+                    >
                       {def.definition}
                       {def.example && (
                         <p className="mt-0.5 text-xs italic text-zinc-400">

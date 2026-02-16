@@ -130,7 +130,10 @@ export default function Home() {
                   <div className="flex-1 min-w-0 py-0.5">
                     <p className="font-medium text-zinc-900 dark:text-zinc-100 truncate">
                       {book.meta?.title ||
-                        book.book_id.split("/").pop()?.replace(/\.epub$/i, "") ||
+                        book.book_id
+                          .split("/")
+                          .pop()
+                          ?.replace(/\.epub$/i, "") ||
                         "Untitled"}
                     </p>
                     {book.meta?.author && (

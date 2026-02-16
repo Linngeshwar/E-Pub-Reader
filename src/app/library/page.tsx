@@ -8,10 +8,7 @@ import {
   updateReadingStatus,
   type ReadingProgress,
 } from "@/lib/reading-progress";
-import {
-  getAllBookMetadata,
-  type BookMetadata,
-} from "@/lib/book-metadata";
+import { getAllBookMetadata, type BookMetadata } from "@/lib/book-metadata";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -26,7 +23,12 @@ interface BookFile {
 
 type ViewMode = "grid" | "list";
 type SortBy = "name" | "recent" | "author" | "status";
-type StatusFilter = "all" | "not_started" | "reading" | "finished" | "abandoned";
+type StatusFilter =
+  | "all"
+  | "not_started"
+  | "reading"
+  | "finished"
+  | "abandoned";
 
 const statusLabels: Record<string, string> = {
   not_started: "Not Started",
@@ -38,7 +40,8 @@ const statusLabels: Record<string, string> = {
 const statusColors: Record<string, string> = {
   not_started: "bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300",
   reading: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  finished: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  finished:
+    "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
   abandoned: "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400",
 };
 
@@ -50,8 +53,12 @@ export default function LibraryPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [sortBy, setSortBy] = useState<SortBy>("recent");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [progressMap, setProgressMap] = useState<Record<string, ReadingProgress>>({});
-  const [metadataMap, setMetadataMap] = useState<Record<string, BookMetadata>>({});
+  const [progressMap, setProgressMap] = useState<
+    Record<string, ReadingProgress>
+  >({});
+  const [metadataMap, setMetadataMap] = useState<Record<string, BookMetadata>>(
+    {},
+  );
   const [statusMenuBook, setStatusMenuBook] = useState<string | null>(null);
 
   useEffect(() => {
@@ -312,21 +319,23 @@ export default function LibraryPage() {
                               {meta.author}
                             </p>
                           )}
-                          {prog && typeof prog.percent_complete === "number" && (
-                            <div className="mt-2">
-                              <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
-                                <div
-                                  className="h-full rounded-full bg-blue-500 transition-all"
-                                  style={{
-                                    width: `${prog.percent_complete}%`,
-                                  }}
-                                />
+                          {prog &&
+                            typeof prog.percent_complete === "number" && (
+                              <div className="mt-2">
+                                <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                                  <div
+                                    className="h-full rounded-full bg-blue-500 transition-all"
+                                    style={{
+                                      width: `${prog.percent_complete}%`,
+                                    }}
+                                  />
+                                </div>
+                                <p className="mt-0.5 text-[10px] text-zinc-400">
+                                  {Math.round(prog.percent_complete || 0)}%
+                                  complete
+                                </p>
                               </div>
-                              <p className="mt-0.5 text-[10px] text-zinc-400">
-                                {Math.round(prog.percent_complete || 0)}% complete
-                              </p>
-                            </div>
-                          )}
+                            )}
                         </div>
                       </Link>
                     );
@@ -347,8 +356,18 @@ export default function LibraryPage() {
                       : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                   }`}
                 >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                    />
                   </svg>
                 </button>
                 <button
@@ -359,8 +378,18 @@ export default function LibraryPage() {
                       : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                   }`}
                 >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
                   </svg>
                 </button>
               </div>
@@ -380,7 +409,9 @@ export default function LibraryPage() {
               {/* Status filter */}
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value as StatusFilter)
+                }
                 className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-700 outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
               >
                 <option value="all">All Books</option>
@@ -429,16 +460,18 @@ export default function LibraryPage() {
                           )}
 
                           {/* Progress bar on cover */}
-                          {prog && typeof prog.percent_complete === "number" && prog.percent_complete > 0 && (
-                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/20">
-                              <div
-                                className="h-full bg-blue-500"
-                                style={{
-                                  width: `${prog.percent_complete}%`,
-                                }}
-                              />
-                            </div>
-                          )}
+                          {prog &&
+                            typeof prog.percent_complete === "number" &&
+                            prog.percent_complete > 0 && (
+                              <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/20">
+                                <div
+                                  className="h-full bg-blue-500"
+                                  style={{
+                                    width: `${prog.percent_complete}%`,
+                                  }}
+                                />
+                              </div>
+                            )}
 
                           {/* Status badge */}
                           {status !== "not_started" && (
@@ -557,21 +590,23 @@ export default function LibraryPage() {
                               {meta.description}
                             </p>
                           )}
-                          {prog && typeof prog.percent_complete === "number" && prog.percent_complete > 0 && (
-                            <div className="mt-1.5 flex items-center gap-2">
-                              <div className="h-1 w-24 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
-                                <div
-                                  className="h-full rounded-full bg-blue-500"
-                                  style={{
-                                    width: `${prog.percent_complete}%`,
-                                  }}
-                                />
+                          {prog &&
+                            typeof prog.percent_complete === "number" &&
+                            prog.percent_complete > 0 && (
+                              <div className="mt-1.5 flex items-center gap-2">
+                                <div className="h-1 w-24 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                                  <div
+                                    className="h-full rounded-full bg-blue-500"
+                                    style={{
+                                      width: `${prog.percent_complete}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-[10px] text-zinc-400">
+                                  {Math.round(prog.percent_complete || 0)}%
+                                </span>
                               </div>
-                              <span className="text-[10px] text-zinc-400">
-                                {Math.round(prog.percent_complete || 0)}%
-                              </span>
-                            </div>
-                          )}
+                            )}
                         </div>
                       </Link>
 

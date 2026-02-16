@@ -41,7 +41,10 @@ export async function upsertBookMetadata(
   userId: string,
   bookId: string,
   metadata: Partial<
-    Omit<BookMetadata, "id" | "user_id" | "book_id" | "created_at" | "updated_at">
+    Omit<
+      BookMetadata,
+      "id" | "user_id" | "book_id" | "created_at" | "updated_at"
+    >
   >,
 ): Promise<void> {
   try {

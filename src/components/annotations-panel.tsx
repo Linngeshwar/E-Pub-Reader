@@ -10,8 +10,10 @@ interface AnnotationsPanelProps {
 }
 
 const colorMap: Record<string, string> = {
-  yellow: "bg-yellow-100 border-yellow-300 dark:bg-yellow-900/30 dark:border-yellow-700",
-  green: "bg-green-100 border-green-300 dark:bg-green-900/30 dark:border-green-700",
+  yellow:
+    "bg-yellow-100 border-yellow-300 dark:bg-yellow-900/30 dark:border-yellow-700",
+  green:
+    "bg-green-100 border-green-300 dark:bg-green-900/30 dark:border-green-700",
   blue: "bg-blue-100 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700",
   red: "bg-red-100 border-red-300 dark:bg-red-900/30 dark:border-red-700",
 };
@@ -38,8 +40,18 @@ export default function AnnotationsPanel({
             className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             aria-label="Close"
           >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>

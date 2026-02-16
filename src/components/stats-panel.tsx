@@ -55,14 +55,26 @@ export default function StatsPanel({
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
               Reading Stats
             </h2>
-            <p className="text-xs text-zinc-400 mt-0.5 line-clamp-1">{bookTitle}</p>
+            <p className="text-xs text-zinc-400 mt-0.5 line-clamp-1">
+              {bookTitle}
+            </p>
           </div>
           <button
             onClick={onClose}
             className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -76,7 +88,9 @@ export default function StatsPanel({
             {/* Progress */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">Progress</span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Progress
+                </span>
                 <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                   {Math.round(percentComplete)}%
                 </span>
@@ -89,7 +103,8 @@ export default function StatsPanel({
               </div>
               {totalPages > 0 && (
                 <p className="text-xs text-zinc-400 mt-1">
-                  Page {currentPage} of {totalPages} — {pagesRemaining} pages remaining
+                  Page {currentPage} of {totalPages} — {pagesRemaining} pages
+                  remaining
                 </p>
               )}
             </div>
@@ -111,11 +126,7 @@ export default function StatsPanel({
                 value={String((stats?.totalSessions || 0) + 1)}
                 icon="📅"
               />
-              <StatCard
-                label="Est. Time Left"
-                value={eta}
-                icon="🎯"
-              />
+              <StatCard label="Est. Time Left" value={eta} icon="🎯" />
               {stats && stats.averageSessionMinutes > 0 && (
                 <StatCard
                   label="Avg Session"

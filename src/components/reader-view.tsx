@@ -258,11 +258,7 @@ export default function ReaderView() {
           if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
             e.preventDefault();
             handleNavigationRef.current("prev");
-          } else if (
-            e.key === "ArrowRight" ||
-            e.key === "d" ||
-            e.key === "D"
-          ) {
+          } else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
             e.preventDefault();
             handleNavigationRef.current("next");
           }
@@ -327,12 +323,15 @@ export default function ReaderView() {
             // Find current chapter from TOC
             let chapterName = "";
             const href = location.start.href;
-            const toc =
-              (book.navigation?.toc as TocItem[]) || [];
+            const toc = (book.navigation?.toc as TocItem[]) || [];
 
             function findChapter(items: TocItem[]): string | null {
               for (const item of items) {
-                if (href && item.href && href.includes(item.href.split("#")[0])) {
+                if (
+                  href &&
+                  item.href &&
+                  href.includes(item.href.split("#")[0])
+                ) {
                   return item.label.trim();
                 }
                 if (item.subitems?.length) {
@@ -485,7 +484,12 @@ export default function ReaderView() {
         const duration = Math.round(
           (Date.now() - sessionStartRef.current.getTime()) / 1000,
         );
-        endSession(sessionIdRef.current, duration, 0, cfiRef.current || undefined);
+        endSession(
+          sessionIdRef.current,
+          duration,
+          0,
+          cfiRef.current || undefined,
+        );
         sessionIdRef.current = null;
       }
       if (renditionRef.current) {
@@ -548,14 +552,14 @@ export default function ReaderView() {
       if (!book || !query.trim()) return [];
 
       const results: SearchResult[] = [];
-      const spineItems = (book.spine as unknown as { spineItems: EpubSection[] })
-        .spineItems;
+      const spineItems = (
+        book.spine as unknown as { spineItems: EpubSection[] }
+      ).spineItems;
 
       for (const item of spineItems) {
         try {
           await item.load(book.load.bind(book));
-          const findings: { cfi: string; excerpt: string }[] =
-            item.find(query);
+          const findings: { cfi: string; excerpt: string }[] = item.find(query);
           findings.forEach((result) => {
             results.push({
               cfi: result.cfi,
@@ -682,9 +686,7 @@ export default function ReaderView() {
     if (!ready) return;
     const timer = setInterval(() => {
       setSessionSeconds(
-        Math.round(
-          (Date.now() - sessionStartRef.current.getTime()) / 1000,
-        ),
+        Math.round((Date.now() - sessionStartRef.current.getTime()) / 1000),
       );
     }, 1000);
     return () => clearInterval(timer);
@@ -909,9 +911,7 @@ export default function ReaderView() {
             onClick={toggleTheme}
             className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
             aria-label={
-              theme === "dark"
-                ? "Switch to light mode"
-                : "Switch to dark mode"
+              theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
             }
           >
             {theme === "dark" ? (

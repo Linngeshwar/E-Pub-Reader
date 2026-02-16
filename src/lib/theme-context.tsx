@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useSyncExternalStore } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 type Theme = "light" | "dark";
 
@@ -28,7 +34,11 @@ const getSnapshot = () => true;
 const getServerSnapshot = () => false;
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const mounted = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const mounted = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
   // Apply theme class to <html> element

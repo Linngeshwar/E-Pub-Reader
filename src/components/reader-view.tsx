@@ -33,7 +33,9 @@ export default function ReaderView() {
   type HideResult = "no-cover" | "advance" | "ignore" | "hidden";
 
   // Create a ref to store the latest handleNavigation for epub.js closure
-  const handleNavigationRef = useRef<(direction: NavigationDirection) => void>(() => {});
+  const handleNavigationRef = useRef<(direction: NavigationDirection) => void>(
+    () => {},
+  );
 
   const hideCover = useCallback(
     (direction: NavigationDirection): HideResult => {
@@ -153,10 +155,10 @@ export default function ReaderView() {
 
         // Attach keyboard listener to the rendition (iframe context)
         rendition.on("keydown", (e: KeyboardEvent) => {
-          if (e.key === "ArrowLeft") {
+          if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
             e.preventDefault();
             handleNavigationRef.current("prev");
-          } else if (e.key === "ArrowRight") {
+          } else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
             e.preventDefault();
             handleNavigationRef.current("next");
           }
@@ -277,10 +279,10 @@ export default function ReaderView() {
   // Keyboard navigation at window level
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "ArrowLeft") {
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
         e.preventDefault();
         handleNavigation("prev");
-      } else if (e.key === "ArrowRight") {
+      } else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
         e.preventDefault();
         handleNavigation("next");
       }
@@ -336,15 +338,37 @@ export default function ReaderView() {
         <button
           onClick={toggleTheme}
           className="rounded-lg p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          aria-label={
+            theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+          }
         >
           {theme === "dark" ? (
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+              />
             </svg>
           ) : (
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+              />
             </svg>
           )}
         </button>
@@ -362,36 +386,35 @@ export default function ReaderView() {
 
       {/* Main content area - below header */}
       <div className="relative flex-1 overflow-hidden">
-
         {/* Cover overlay */}
         {showCover && ready && coverUrl && (
           <div
             className="absolute inset-0 z-20 flex items-center justify-center bg-white dark:bg-zinc-950"
             onClick={() => handleNavigation("next")}
           >
-          <div className="flex h-full max-h-[80vh] flex-col items-center justify-center gap-4 px-4">
-            <div className="relative aspect-2/3 w-full max-w-sm overflow-hidden rounded-xl shadow-2xl">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={coverUrl}
-                alt={title}
-                className="h-full w-full object-cover"
-              />
+            <div className="flex h-full max-h-[80vh] flex-col items-center justify-center gap-4 px-4">
+              <div className="relative aspect-2/3 w-full max-w-sm overflow-hidden rounded-xl shadow-2xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={coverUrl}
+                  alt={title}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <h1 className="max-w-md text-center text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+                {title}
+              </h1>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                Press any arrow key or tap to start reading
+              </p>
             </div>
-            <h1 className="max-w-md text-center text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-              {title}
-            </h1>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Press any arrow key or tap to start reading
-            </p>
-          </div>
           </div>
         )}
 
         {/* EPUB container */}
-        <div 
-          ref={viewerRef} 
-          className="h-full w-full focus:outline-none" 
+        <div
+          ref={viewerRef}
+          className="h-full w-full focus:outline-none"
           tabIndex={0}
         />
 

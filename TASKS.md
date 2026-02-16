@@ -20,12 +20,30 @@ This file tracks actionable steps you should take next to configure, test, and i
 
 Optional improvements / future tasks
 
-- [ ] Add cover thumbnails by extracting from EPUB metadata and storing cached images
-- [ ] Add chapter list / table of contents drawer in reader UI
-- [ ] Add per-user preferences (font size, line height, themes) and store in Supabase
+- [x] Add cover thumbnails by extracting from EPUB metadata and storing cached images
+- [x] Add chapter list / table of contents drawer in reader UI
+- [x] Add per-user preferences (font size, line height, themes) and store in Supabase
 - [ ] Improve EPUB caching strategies (range requests, chunking large EPUBs)
 - [ ] Add end-to-end tests for reader and progress sync
 - [ ] Add CI for TypeScript checks and linting
+
+Enhanced features (migration 003)
+
+- [x] Run `supabase/migrations/003_enhanced_features.sql` for new tables
+- [x] Table of contents sidebar/drawer in reader
+- [x] Progress indicator (percentage, current/total pages, chapter name)
+- [x] Full-text search within current book
+- [x] Dictionary/Wikipedia lookup for selected words
+- [x] Text highlighting with color choices (yellow, green, blue)
+- [x] Bookmarks (save/list/navigate/delete)
+- [x] Annotations synced across devices via Supabase
+- [x] Reading stats (session time, total time, est. time to finish)
+- [x] Book metadata extraction (author, publisher, description, language)
+- [x] Grid/list view toggle in library
+- [x] Reading status management (Not Started, Reading, Finished, Abandoned)
+- [x] Recently read / Continue Reading section on homepage and library
+- [x] Sort & filter books by title, author, status, or recent
+- [x] Selection toolbar (highlight + dictionary lookup)
 
 Notes
 

@@ -1,7 +1,19 @@
 "use client";
 
 import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import ReaderView from "@/components/reader-view";
+import PDFViewer from "@/components/pdf-viewer";
+
+function ReaderContent() {
+  const searchParams = useSearchParams();
+  const bookId = searchParams.get("book");
+  
+  // Detect if it's a PDF or EPUB based on file extension
+  const isPDF = bookId?.toLowerCase().endsWith(".pdf") || false;
+  
+  return isPDF ? <PDFViewer /> : <ReaderView />;
+}
 
 export default function ReaderPage() {
   return (
@@ -13,7 +25,7 @@ export default function ReaderPage() {
           </div>
         }
       >
-        <ReaderView />
+        <ReaderContent />
       </Suspense>
     </div>
   );

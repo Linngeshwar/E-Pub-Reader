@@ -40,8 +40,11 @@ export default function UploadPage() {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      if (!file.name.toLowerCase().endsWith(".epub")) {
-        setError(`Skipped ${file.name}: not an EPUB file`);
+      const fileName = file.name.toLowerCase();
+      const isValidFile = fileName.endsWith(".epub") || fileName.endsWith(".pdf");
+      
+      if (!isValidFile) {
+        setError(`Skipped ${file.name}: must be EPUB or PDF file`);
         continue;
       }
 
@@ -94,10 +97,10 @@ export default function UploadPage() {
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         <div className="rounded-2xl bg-white p-8 shadow-sm dark:bg-zinc-900">
           <h2 className="mb-4 text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-            Upload EPUB Files
+            Upload Books
           </h2>
           <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">
-            Select one or more EPUB files to upload to your library. Files will
+            Select one or more EPUB or PDF files to upload to your library. Files will
             be stored in your personal folder.
           </p>
 
@@ -120,7 +123,7 @@ export default function UploadPage() {
                 />
               </svg>
               <span className="mb-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Click to upload EPUB files
+                Click to upload EPUB or PDF files
               </span>
               <span className="text-xs text-zinc-500 dark:text-zinc-400">
                 or drag and drop
@@ -129,7 +132,7 @@ export default function UploadPage() {
             <input
               id="epub-upload"
               type="file"
-              accept=".epub"
+              accept=".epub,.pdf"
               multiple
               onChange={handleUpload}
               disabled={uploading}

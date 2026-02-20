@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
-import { getProgress, upsertProgress } from "@/lib/reading-progress";
+import { getProgress } from "@/lib/reading-progress";
 import { upsertBookMetadata } from "@/lib/book-metadata";
 import {
   getBookmarks,
@@ -21,6 +21,12 @@ import {
 } from "@/lib/annotations";
 import { createSession, endSession } from "@/lib/reading-stats";
 import { lookupWord, type DictionaryResult } from "@/lib/dictionary";
+import { getOfflineBook } from "@/lib/offline-books";
+import {
+  saveProgressWithSync,
+  getQueuedCount,
+  syncQueuedProgress,
+} from "@/lib/progress-sync";
 import TocDrawer, { type TocItem } from "@/components/toc-drawer";
 import SearchPanel, { type SearchResult } from "@/components/search-panel";
 import DictionaryPopup from "@/components/dictionary-popup";
@@ -92,6 +98,10 @@ export default function ReaderView() {
   const [showDictionary, setShowDictionary] = useState(false);
   const [dictionaryLoading, setDictionaryLoading] = useState(false);
 
+  // Sync state
+  const [syncPending, setSyncPending] = useState(false);
+  const [syncCount, setSyncCount] = useState(0);
+
   // Reading session tracking
   const sessionIdRef = useRef<string | null>(null);
   const sessionStartRef = useRef<Date>(new Date());
@@ -156,17 +166,25 @@ export default function ReaderView() {
     handleNavigationRef.current = handleNavigation;
   }, [handleNavigation]);
 
-  // Enhanced save with progress info
+  // Enhanced save with progress info and sync queue
   const saveCfi = useCallback(async () => {
     if (!user || !bookId || !cfiRef.current) return;
     try {
-      await upsertProgress(user.id, bookId, cfiRef.current, {
+      const result = await saveProgressWithSync(user.id, bookId, cfiRef.current, {
         reading_status: "reading",
         percent_complete: progress.percentage,
         current_page: progress.currentPage,
         total_pages: progress.totalPages,
       });
-      localStorage.setItem(`cfi:${bookId}`, cfiRef.current);
+      
+      if (result.queued) {
+        setSyncPending(true);
+        const count = await getQueuedCount(user.id);
+        setSyncCount(count);
+      } else if (result.success) {
+        setSyncPending(false);
+        setSyncCount(0);
+      }
     } catch (err) {
       console.error("Save failed:", err);
     }
@@ -210,6 +228,29 @@ export default function ReaderView() {
     };
   }, [ready, saveCfi]);
 
+  // Check for pending syncs on mount and when online
+  useEffect(() => {
+    if (!user) return;
+
+    async function checkSyncStatus() {
+      const count = await getQueuedCount(user!.id);
+      setSyncCount(count);
+      setSyncPending(count > 0);
+    }
+
+    checkSyncStatus();
+
+    // Listen for online event to trigger sync
+    const handleOnline = async () => {
+      console.log("Network back online - syncing...");
+      await syncQueuedProgress();
+      await checkSyncStatus();
+    };
+
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, [user]);
+
   // ── Book initialization ──────────────────────────────────────────
   useEffect(() => {
     if (authLoading) return;
@@ -236,14 +277,26 @@ export default function ReaderView() {
 
     async function init() {
       try {
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("books").getPublicUrl(bookId!);
+        // Try to load from offline storage first
+        const offlineBook = await getOfflineBook(bookId!);
+        let bookSource: string | ArrayBuffer;
+
+        if (offlineBook?.blob) {
+          console.log("Loading book from offline storage");
+          // Convert Blob to ArrayBuffer for ePubjs
+          bookSource = await offlineBook.blob.arrayBuffer();
+        } else {
+          console.log("Loading book from network");
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from("books").getPublicUrl(bookId!);
+          bookSource = publicUrl;
+        }
 
         const epubModule = await import("epubjs");
         const ePub = epubModule.default || epubModule;
 
-        const book = ePub(publicUrl);
+        const book = ePub(bookSource);
         bookRef.current = book;
 
         const rendition = book.renderTo(viewerRef.current!, {
@@ -290,18 +343,55 @@ export default function ReaderView() {
         rendition.themes.select(theme);
 
         // Get saved progress
-        let startCfi: string | undefined;
         const progressData = await getProgress(user!.id, bookId!);
-        if (progressData?.last_location_cfi) {
-          startCfi = progressData.last_location_cfi;
-        } else {
-          const cached = localStorage.getItem(`cfi:${bookId}`);
-          if (cached) startCfi = cached;
+        const savedCfi = progressData?.last_location_cfi || localStorage.getItem(`cfi:${bookId}`);
+        const savedPercentage = progressData?.percent_complete || 0;
+        
+        startedAtBeginningRef.current = !savedCfi && savedPercentage === 0;
+
+        // Wait for book to be ready and generate locations for accurate positioning
+        await book.ready;
+        
+        console.log("Generating locations for accurate positioning...");
+        try {
+          await book.locations.generate(1600); // Higher number = more accuracy
+          console.log(`Locations generated: ${book.locations.length()} points`);
+        } catch (err) {
+          console.warn("Location generation failed, will use CFI only:", err);
         }
 
-        startedAtBeginningRef.current = !startCfi;
-
-        await rendition.display(startCfi);
+        // Smart position restoration
+        let restoredSuccessfully = false;
+        const startCfi: string | undefined = savedCfi || undefined;
+        
+        // Method 1: Try percentage-based (most reliable across devices)
+        if (savedPercentage > 0 && book.locations.length() > 0) {
+          try {
+            const targetLocation = book.locations.cfiFromPercentage(savedPercentage / 100);
+            console.log(`Restoring by percentage: ${savedPercentage}%`);
+            await rendition.display(targetLocation);
+            restoredSuccessfully = true;
+          } catch (err) {
+            console.warn("Percentage-based restore failed:", err);
+          }
+        }
+        
+        // Method 2: Fallback to CFI if percentage failed
+        if (!restoredSuccessfully && savedCfi) {
+          try {
+            console.log("Restoring by CFI");
+            await rendition.display(savedCfi);
+            restoredSuccessfully = true;
+          } catch (err) {
+            console.warn("CFI-based restore failed:", err);
+          }
+        }
+        
+        // Method 3: Start from beginning if all else fails
+        if (!restoredSuccessfully) {
+          console.log("Starting from beginning");
+          await rendition.display();
+        }
 
         if (cancelled) return;
 
@@ -377,15 +467,6 @@ export default function ReaderView() {
         if (!cancelled && navigation?.toc) {
           setTocItems(navigation.toc as TocItem[]);
         }
-
-        // ── Generate locations for accurate percentage ─────────────
-        book.ready.then(() => {
-          if (!cancelled) {
-            book.locations.generate(1024).catch(() => {
-              // Locations generation may fail for some EPUBs
-            });
-          }
-        });
 
         // ── Extract metadata ───────────────────────────────────────
         const metadata = await book.loaded.metadata;
@@ -520,8 +601,17 @@ export default function ReaderView() {
   // Keyboard navigation
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      // Don't handle if a panel is open
-      if (showSearch) return;
+      // Don't handle if any panel is open
+      if (
+        showToc ||
+        showSearch ||
+        showBookmarksPanel ||
+        showAnnotationsPanel ||
+        showStats ||
+        showDictionary
+      ) {
+        return;
+      }
       if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
         e.preventDefault();
         handleNavigation("prev");
@@ -532,7 +622,16 @@ export default function ReaderView() {
     }
     window.addEventListener("keydown", handleKey, true);
     return () => window.removeEventListener("keydown", handleKey, true);
-  }, [handleNavigation, ready, showSearch]);
+  }, [
+    handleNavigation,
+    ready,
+    showToc,
+    showSearch,
+    showBookmarksPanel,
+    showAnnotationsPanel,
+    showStats,
+    showDictionary,
+  ]);
 
   // ── Action handlers ────────────────────────────────────────────
 
@@ -1098,6 +1197,28 @@ export default function ReaderView() {
               {progress.currentChapter || "—"}
             </p>
             <div className="flex items-center gap-3 text-xs text-zinc-400">
+              {/* Sync status indicator */}
+              {syncPending && (
+                <span
+                  className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400"
+                  title={`${syncCount} progress update${syncCount !== 1 ? 's' : ''} pending sync`}
+                >
+                  <svg
+                    className="h-3 w-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  <span>Offline</span>
+                </span>
+              )}
               {progress.totalPages > 0 && (
                 <span>
                   {progress.currentPage}/{progress.totalPages}

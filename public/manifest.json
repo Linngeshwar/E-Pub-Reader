@@ -1,7 +1,7 @@
 {
-  "name": "EPUB Reader",
+  "name": "EPUB & PDF Reader",
   "short_name": "Reader",
-  "description": "Cross-platform EPUB reader with reading progress sync",
+  "description": "Cross-platform EPUB and PDF reader with reading progress sync",
   "start_url": "/library",
   "scope": "/",
   "display": "standalone",

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { ServiceWorkerRegistrar } from "@/components/sw-registrar";
+import { ProgressSyncManager } from "@/components/progress-sync-manager";
 import "./globals.css";
 
 const inter = Inter({
@@ -11,13 +12,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "EPUB Reader",
-  description: "Cross-platform EPUB reader with reading progress sync",
+  title: "EPUB & PDF Reader",
+  description: "Cross-platform EPUB and PDF reader with reading progress sync",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "EPUB Reader",
+    title: "EPUB & PDF Reader",
   },
 };
 
@@ -48,6 +49,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <ServiceWorkerRegistrar />
+        <ProgressSyncManager />
         <ThemeProvider>
           <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>

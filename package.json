@@ -12,7 +12,7 @@
     "@supabase/supabase-js": "^2.95.3",
     "epubjs": "^0.3.93",
     "next": "16.1.6",
-    "pdfjs-dist": "^4.0.379",
+    "pdfjs-dist": "^4.2.67",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
